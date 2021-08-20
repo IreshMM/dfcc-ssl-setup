@@ -31,5 +31,7 @@ jobs:
         uses: fudan-mse/latex-action@v0.0.1
         with:
           root_file: dfcc-ssl-setup-guide.tex
-      - name: Run a one-line script
-        run: ls -l
+      - uses: actions/upload-artifact@v2
+        with:
+          name: dfcc-ssl-setup-guide.pdf
+          path: dfcc-ssl-setup-guide.pdf
