@@ -31,6 +31,5 @@ jobs:
         uses: fudan-mse/latex-action@v0.0.1
         with:
           root_file: dfcc-ssl-setup-guide.tex
-          working_directory: /tmp
       - name: Run a one-line script
-        run: ls -l /tmp
+        run: ls -l
