@@ -1,18 +1,16 @@
 \documentclass{article}
-\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{enumitem}
-\usepackage[total={8in, 8in}]{geometry}
+\usepackage[total={8in, 10.5in}]{geometry}
+\usepackage{courier}
 \lstset{
   breaklines=true,
   frame=single,
   gobble=16,
   tabsize=4,
-  basicstyle=\ttfamily,
-  showstringspaces=false,
   language=bash,
-  basicstyle=\ttfamily
+  basicstyle=\small\ttfamily,
 }
 
 \author{Iresh Dissanayaka}
@@ -83,28 +81,75 @@
     \subsubsection{Create a keystore}
     Idea here is to bundle all three files into a single file called `keystore'.
 
-    \begin{enumerate}
+    \begin{enumerate}[itemsep=4ex]
         \item Verify all three files and their formats
         \begin{enumerate}[itemsep=3ex]
-            \item Verify the integration node certificate file. Run,
+            \item Verify the integration node certificate file.
+
+
+            The certificate file might be encoded in PEM (regardless of the file extension) or DER binary format. To check whether it is in PEM, run,
             \begin{lstlisting}
                 openssl x509 -in cert.cer -subject -noout
             \end{lstlisting}
-            Example output:
+            If it says something similar to following, it is in PEM.
             \begin{lstlisting}
                 subject= /C=LK/ST=WESTERN/L=COLOMBO 3/O=DFCC BANK PLC/OU=IT/CN=esbprod.dfcc.net
             \end{lstlisting}
-            So we can verify the certificate file is in x509 PEM encoded format.
+            else if it says something similar to following, it is probably in DER
+            \begin{lstlisting}
+                unable to load certificate
+                139778153113488:error:0906D06C:PEM routines:PEM_read_bio:no start line:pem_lib.c:707
+            \end{lstlisting}
+            then run the following to check whether it is DER,
+            \begin{lstlisting}
+                openssl x509 -inform der -in cert.cer -subject -noout
+            \end{lstlisting}
+            If it says something similar to following, it is in DER.
+            \begin{lstlisting}
+                subject= /C=LK/ST=WESTERN/L=COLOMBO 3/O=DFCC BANK PLC/OU=IT/CN=esbprod.dfcc.net
+            \end{lstlisting}
+            if that results an error as well, something might be wrong. Check your certificate file.
+
+            
+            If your certificate file was in DER, convert that to PEM and replace the original file \texttt{cert.cer}, Run,
+            \begin{lstlisting}
+                openssl x509 -inform der -in cert.cer -outform pem -out cert.pem
+                mv cert.pem cert.cer
+            \end{lstlisting}
 
             \item Verify the CA certificate file. Run,
+            It is pretty much the same for CA certificate as well.
+
+
+            The certificate file might be encoded in PEM (regardless of the file extension) or DER binary format. To check whether it is in PEM, run,
             \begin{lstlisting}
-                openssl x509 -inform der -in  root-ca.cer -noout -subject
+                openssl x509 -in root-ca.cer -subject -noout
             \end{lstlisting}
-            Example output:
+            If it says something similar to following, it is in PEM.
             \begin{lstlisting}
                 subject= /DC=net/DC=dfcc/CN=dfcc-ROOTAD-CA-1
             \end{lstlisting}
-            So we can verify the certificate file is in x509 DER binary format
+            else if it says something similar to following, it is probably in DER
+            \begin{lstlisting}
+                unable to load certificate
+                139778153113488:error:0906D06C:PEM routines:PEM_read_bio:no start line:pem_lib.c:707
+            \end{lstlisting}
+            then run the following to check whether it is DER,
+            \begin{lstlisting}
+                openssl x509 -inform der -in root-ca.cer -subject -noout
+            \end{lstlisting}
+            If it says something similar to following, it is in DER.
+            \begin{lstlisting}
+                subject= /DC=net/DC=dfcc/CN=dfcc-ROOTAD-CA-1
+            \end{lstlisting}
+            if that results an error as well, something might be wrong. Check your certificate file.
+
+
+            If your certificate file was in DER, convert that to PEM and replace the original file \texttt{root-ca.cer}, Run,
+            \begin{lstlisting}
+                openssl x509 -inform der -in root-ca.cer -outform pem -out root-ca.pem
+                mv root-ca.pem root-ca.cer
+            \end{lstlisting}
 
             \item Verify the private key file. Run,
             \begin{lstlisting}
@@ -117,14 +162,16 @@
 
             \item Verify that the certificate and the private key match. Run,
             \begin{lstlisting}
-                test \
-                $(openssl x509 -in cert.cer -modulus -noout)\
-                =\
-                $(openssl rsa -in priv-key.pem -modulus -noout)
-                \&& echo OK
+                test $(openssl x509 -in cert.cer -modulus -noout) = $(openssl rsa -in priv-key.pem -modulus -noout) && echo OK
             \end{lstlisting}
-            
+            Example output:
+            \begin{lstlisting}
+                OK
+            \end{lstlisting}
+
         \end{enumerate}
+
+        \item Bundle the integration node's certificate and the corresponding private key to a single \texttt{.pfx} file so they can imported to the keystore that is yet to be created
     \end{enumerate}
 
 \end{document}
