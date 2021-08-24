@@ -2,7 +2,7 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{enumitem}
-\usepackage[total={8in, 11in}]{geometry}
+\usepackage[total={8in, 10in}]{geometry}
 \lstset{
   breaklines=true,
   frame=single,
@@ -10,7 +10,8 @@
   tabsize=4,
   language=bash,
   basicstyle=\small\ttfamily,
-  columns=fullflexible
+  columns=fullflexible,
+  showstringspaces=false
 }
 
 \author{Iresh Dissanayaka}
@@ -78,7 +79,7 @@
         \item \texttt{root-ca.cer} is the CA's certificate
     \end{itemize}
 
-    \subsubsection{Create a keystore}
+    \subsubsection{Create a keystore and import the certificates}
     Idea here is to bundle all three files into a single file called `keystore'.
 
     \begin{enumerate}[itemsep=4ex]
@@ -162,7 +163,7 @@
 
             \item Verify that the certificate and the private key match. Run,
             \begin{lstlisting}
-                test $(openssl x509 -in cert.cer -modulus -noout) = $(openssl rsa -in priv-key.pem -modulus -noout) && echo OK
+                test "$(openssl x509 -in cert.cer -modulus -noout)" = "$(openssl rsa -in priv-key.pem -modulus -noout)" && echo OK
             \end{lstlisting}
             Example output:
             \begin{lstlisting}
@@ -171,7 +172,52 @@
 
         \end{enumerate}
 
-        \item Bundle the integration node's certificate and the corresponding private key to a single \texttt{.pfx} file so they can imported to the keystore that is yet to be created
-    \end{enumerate}
+        \item Bundle the integration node's certificate and the corresponding private key to a single \texttt{.pfx} file so they can be imported to the keystore that is yet to be created.
 
+        Now what we have is the following set of files,
+        \begin{itemize}
+            \item \texttt{cert.cer} (PEM format) * File extension doesn't have to be \texttt{.pem} what matters is what's inside
+            \item \texttt{root-ca.cer} (PEM format)
+            \item \texttt{priv-key.pem} (PEM format) corresponding private key for the integration node's certificate
+        \end{itemize}
+
+        \begin{enumerate}
+            \item Create a \texttt{.pfx} file to contain the integration node's certificate and the corresponding private key and the CA certificate. Run,
+            \begin{lstlisting}
+                openssl pkcs12 -export -inkey priv-key.pem -in cert.cer -name node-cert -caname root-ca-cert -certfile root-ca.cer -out bundle.pfx
+            \end{lstlisting}
+            You'll be prompted to enter an export password. Please remember the password you enter.
+        \end{enumerate}
+
+        \item Create the keystore and import the certificates and the private key
+
+        Notice that we bundled the private key with the corresponding certificate, because we can't import private keys alone to the keystore.
+        
+        We are going to use IBM's Global Security Kit (GSKit) to create the keystore. So you need it installed. Please install it if you haven't already installed it. If you have a MQ installation, it contains the GSKit as well. We are going to use the GSKit installation that comes with the MQ installation for this guide.
+        \begin{enumerate}
+            \item Prepare the environment for running necessary commands. Run, (please use correct paths according to your environment)
+            \begin{lstlisting}
+                source <app_connect_installation_root>/server/bin/mqsiprofile -s
+                PATH=$PATH:<mq_installation_root>/gskit8/bin
+                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<mq_installation_root>/gskit8/lib64
+            \end{lstlisting}
+            \item Create the keystore which is just a file. Keystore type will be P12 and we'll name the file \texttt{node\_keystore.p12}. Run, (you need to choose a password for the \lstinline{<keystore_password>})
+            \begin{lstlisting}
+                gsk8capicmd_64 -keydb -create -db node_keystore.p12 -type p12 -pw <keystore_password>
+            \end{lstlisting}
+            \item Import the integration node's certificate and the private key to the keystore. Run,
+            \begin{lstlisting}
+                gsk8capicmd_64 -cert -import -db bundle.pfx -type p12 -pw admin -label node-cert -target node_keystore.p12 -target_pw passw0rd -target_type p12
+            \end{lstlisting}
+            \item Import the CA certificate to the keystore. Run,
+            \begin{lstlisting}
+                gsk8capicmd_64 -cert -import -db bundle.pfx -type p12 -pw admin -label root-ca-cert -target node_keystore.p12 -target_pw passw0rd -target_type p12
+            \end{lstlisting}
+        \end{enumerate}
+
+        Great! You have the keystore ready now!
+
+    \end{enumerate}
+    \subsubsection{Provide the keystore and the parameters to the integration node}
+    
 \end{document}
