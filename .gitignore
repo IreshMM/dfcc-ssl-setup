@@ -6,4 +6,5 @@
 *.log
 *.bbl
 *.blg
+*.out
 __latexindent_temp.tex
